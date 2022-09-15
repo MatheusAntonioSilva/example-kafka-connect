@@ -54,11 +54,12 @@ services:
       - "host.docker.internal:172.17.0.1"
 
   kafka-connect:
-    image: confluentinc/cp-kafka-connect-base:6.0.0
+    image: confluentinc/cp-kafka-connect:latest
     container_name: kafka-connect
     depends_on:
       - zookeeper
       - kafka
+      - mysql
     ports:
       - 8083:8083
     environment:
@@ -68,12 +69,12 @@ services:
       CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
       CONNECT_OFFSET_STORAGE_TOPIC: _connect-offsets
       CONNECT_STATUS_STORAGE_TOPIC: _connect-status
-      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
-      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
+      CONNECT_LOG4J_ROOT_LOGLEVEL: "DEBUG"
       CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
       CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
@@ -83,12 +84,13 @@ services:
       #   CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
       #   CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
       #  ---------------
-      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/etc/kafka-connect/jars"
     # If you want to use the Confluent Hub installer to d/l component, but make them available
     # when running this offline, spin up the stack once and then run :
     #   docker cp kafka-connect:/usr/share/confluent-hub-components ./data/connect-jars
     volumes:
       - $PWD/data:/data
+      - $PWD/jars:/etc/kafka-connect/jars
     # In the command section, $ are replaced with $$ to avoid the error 'Invalid interpolation format for "command" option'
     command:
       - bash
@@ -107,61 +109,3 @@ services:
         sleep infinity
     extra_hosts:
       - "host.docker.internal:172.17.0.1"
-
-  es01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.2
-    container_name: es01
-    environment:
-      - node.name=es01
-      - cluster.name=es-docker-cluster
-      - cluster.initial_master_nodes=es01
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - ./es01:/usr/share/elasticsearch/data
-    ports:
-      - 9200:9200
-    extra_hosts:
-      - "host.docker.internal:172.17.0.1"
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.11.2
-    container_name: kib01
-    ports:
-      - 5601:5601
-    environment:
-      ELASTICSEARCH_URL: http://es01:9200
-      ELASTICSEARCH_HOSTS: '["http://es01:9200"]'
-    extra_hosts:
-      - "host.docker.internal:172.17.0.1"
-
-  mongodb:
-    image: mongo:4.4.4
-    restart: always
-    volumes:
-      - ./.docker/dbdata:/data/db
-      - ./.docker/mongo:/docker-entrypoint-initdb.d
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=root
-      - MONGO_INITDB_DATABASE=fullcycle
-    extra_hosts:
-      - "host.docker.internal:172.17.0.1"
-
-  mongo-express:
-    image: mongo-express
-    restart: always
-    ports:
-      - 8085:8081
-    environment:
-      - ME_CONFIG_MONGODB_SERVER=mongodb
-      - ME_CONFIG_MONGODB_AUTH_USERNAME=root
-      - ME_CONFIG_MONGODB_AUTH_PASSWORD=root
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=root
-    depends_on:
-      - mongodb
