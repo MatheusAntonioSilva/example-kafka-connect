@@ -25,6 +25,8 @@ CREATE TABLE new_products (id int, description varchar(255), created_at timestam
 
 Adicione os conectores no painel da confluent por meio do host **http://localhost:9021/clusters/** na aba **connect** do menu
 
+![Captura de tela de 2022-09-20 22-59-09](https://user-images.githubusercontent.com/25187342/191397668-b58d5651-0e12-4866-af20-de26bb41bb04.png)
+
 Após isso verifique se todos os connectores estão com status **running**
 
 Se sim execute o **INSERT** e **SELECT** abaixo em `docker-compose exec mysql bash` com usuário e senha disponivel no `docker-compose.yml` e veja a magica acontecer.
